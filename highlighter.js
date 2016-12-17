@@ -1,48 +1,89 @@
 var prevDom = null;
 var elements = ['DIV', 'P'];
-document.addEventListener('mousemove', function(e) {
-    var element = e.srcElement;
-    if (elements.indexOf(element.nodeName) === -1)
-        return;
 
-    if (prevDom != null)
-        $(prevDom).removeClass('highlight');
+window.apartementFilter = window.apartementFilter || {};
 
-    $(element).addClass('highlight');
-    prevDom = element;
-});
+// document.addEventListener('mousemove', function(e) {
+//     var element = e.srcElement;
+//     if (elements.indexOf(element.nodeName) === -1)
+//         return;
 
-var regexes = [
-    /([\d,]{3,6})(([ ]?(שקל|ש"ח|₪))| )/,
-    /(ארבעה|שני|שתי|שלושה|שלוש|ארבעה|ארבע|חמישה|חמש|[\d\.]{1,4}) חדרים/,
-    /קומה (ראשונה|שנייה|שניה|שלישית|רביעית|חמישית|[\d\.])/
-];
+//     if (prevDom != null)
+//         $(prevDom).removeClass('highlight');
+
+//     $(element).addClass('highlight');
+//     prevDom = element;
+// });
+
 
 $(document).ready(function() {
-    $('.userContent').each(function() {
-        highlightRelevantTextInElement(this);
-    });
+    var mapping = {};
+    setTimeout(function() {
+        $('.userContent').each(function() {
+            highlightRelevantTextInElement(this);
+        });
+    }, 2000);
+
+    setTimeout(function() {
+        filterMapping('price', function(value) {
+            return value < 3300;
+        })
+    }, 4000);
 
     function highlightRelevantTextInElement(element) {
-        for (var i = 0; i < regexes.length; i++) {
-            var regex = regexes[i];
-
-            var arr = splitTextForRegex($(element).html(), regex);
-            if (!arr)
+        var parsers = window.apartementFilter.parsers;
+        var values = {};
+        for (var parserKey in parsers) {
+            var parser = parsers[parserKey];
+            console.log(parserKey + " - " + JSON.stringify(parser));
+            var text = $(element).html();
+            var splittedRegex = splitTextForRegex(text, parser.regex, parser.group);
+            if (splittedRegex == null)
                 continue;
 
-            var html = highlightSplittedText(arr);
-            $(element).html(html);
+            var value = splittedRegex[1];
+            values[parser.fieldName] = parser.parse(value);
+            $(element).html(highlightSplittedText(splittedRegex));
         }
+
+        if (Object.keys(values).length == 0)
+            hideFaceboolPost($(element));
+        else
+            mapping[$(element).attr('id')] = values;
     }
 
-    function splitTextForRegex(text, regex) {
+    function hideFaceboolPost(element) {
+        $(element).parent().parent().parent().hide(600);
+    }
+
+    function filterMapping(key, predicate) {
+        $('.userContent').each(function() {
+            var value = mapping[$(this).attr('id')];
+            if (!value) {
+                hideFaceboolPost(this);
+                return;
+            }
+
+            if (!predicate(value[key]))
+                hideFaceboolPost(this);
+        });
+    }
+
+    function splitTextForRegex(text, regex, group) {
         pos = text.search(regex);
         if (pos === -1)
             return null;
 
         result = [];
-        var length = text.match(regex)[0].length;
+
+        var match = text.match(regex);
+        var matchValue;
+        if (match.length <= group) {
+            console.warn("Missing group key");
+            matchValue = match[0];
+        } else
+            matchValue = match[group];
+        var length = matchValue.length;
         result.push(text.substr(0, pos)); // split into a part before...
         result.push(text.substr(pos, length));
         result.push(text.substr(pos + length)); // a part after

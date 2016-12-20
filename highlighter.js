@@ -1,23 +1,22 @@
-var prevDom = null;
-var elements = ['DIV', 'P'];
-
 window.apartementFilter = window.apartementFilter || {};
-
-// document.addEventListener('mousemove', function(e) {
-//     var element = e.srcElement;
-//     if (elements.indexOf(element.nodeName) === -1)
-//         return;
-
-//     if (prevDom != null)
-//         $(prevDom).removeClass('highlight');
-
-//     $(element).addClass('highlight');
-//     prevDom = element;
-// });
-
 
 $(document).ready(function() {
     var mapping = {};
+
+    var target = document.querySelector("body");
+
+    var observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            console.log(mutation.type);
+        });
+    });
+
+    // configuration of the observer:
+    var config = { attributes: true, childList: true, characterData: true }
+
+    // pass in the target node, as well as the observer options
+    observer.observe(target, config);
+
     setTimeout(function() {
         $('.userContent').each(function() {
             highlightRelevantTextInElement(this);
@@ -26,7 +25,7 @@ $(document).ready(function() {
 
     setTimeout(function() {
         filterMapping('price', function(value) {
-            return value < 3300;
+            return value < 7000;
         })
     }, 4000);
 
@@ -35,7 +34,6 @@ $(document).ready(function() {
         var values = {};
         for (var parserKey in parsers) {
             var parser = parsers[parserKey];
-            console.log(parserKey + " - " + JSON.stringify(parser));
             var text = $(element).html();
             var splittedRegex = splitTextForRegex(text, parser.regex, parser.group);
             if (splittedRegex == null)
@@ -84,9 +82,9 @@ $(document).ready(function() {
         } else
             matchValue = match[group];
         var length = matchValue.length;
-        result.push(text.substr(0, pos)); // split into a part before...
-        result.push(text.substr(pos, length));
-        result.push(text.substr(pos + length)); // a part after
+        result.push(text.slice(0, pos)); // split into a part before...
+        result.push(text.slice(pos, pos + length));
+        result.push(text.slice(pos + length)); // a part after
         return result;
     }
 
